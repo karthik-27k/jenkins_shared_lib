@@ -7,7 +7,7 @@ def call() {
                     def buildNumber = env.BUILD_NUMBER
                     
                     sh """
-                    curl -X POST http://34.42.18.106:5000/jenkinsdata \
+                    curl -X POST http://34.42.18.106:5001/jenkinsdata \
                          -H 'Content-Type: application/json' \
                          -d '{
                                "user": "${user}",
