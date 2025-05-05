@@ -1,60 +1,37 @@
 def call(Map stages) {
-    def user = currentBuild.getBuildCauses()[0]?.userName ?: 'Automated'
-    def startTime = System.currentTimeMillis()
-    def buildTime = new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone('UTC'))
-    def version = "v1.0.0"
-    def jobName = env.JOB_NAME ?: 'Unknown'
-    def buildNumber = env.BUILD_NUMBER ?: '0'
-    def buildResult = 'SUCCESS'
-    def totalStages = 0
-    def completedStages = 0
-    def stageNames = []
-    def failedStage = null
+    // … all your setup, iteration, payload building …
 
     try {
-        stages.each { stageName, stageLogic ->
-            stageNames << stageName
-            totalStages++
-            try {
-                stage(stageName) {
-                    stageLogic()
-                    completedStages++
-                }
-            } catch (e) {
-                buildResult = 'FAILURE'
-                failedStage = stageName
-                echo "Stage '${stageName}' failed: ${e}"
-                throw e
-            }
+        stages.each { name, logic ->
+            // run each stage
         }
-    } catch (err) {
-        echo "Build failed at stage: ${failedStage}"
+    } catch (ignored) {
+        // swallow, since we still want to send data
     } finally {
-        def endTime = System.currentTimeMillis()
-        def durationInSeconds = ((endTime - startTime) / 1000).toInteger()
-
+        // build your primitive payload map…
         def payload = [
-            user             : user,
-            job_name         : jobName,
-            build_number     : buildNumber,
-            version          : version,
-            timestamp        : buildTime,
-            build_result     : buildResult,
-            total_stages     : totalStages,
-            completed_stages : completedStages,
-            stage_names      : stageNames,
-            failed_stage     : failedStage ?: "None",
-            duration_seconds : durationInSeconds
+          user:             user,
+          job_name:         jobName,
+          build_number:     buildNumber,
+          version:          version,
+          timestamp:        buildTime,
+          build_result:     buildResult,
+          total_stages:     totalStages,
+          completed_stages: completedStages,
+          stage_names:      stageNames,
+          failed_stage:     failedStage ?: "None",
+          duration_seconds: durationInSeconds
         ]
+        def json = groovy.json.JsonOutput.toJson(payload).replaceAll("'", "\\\\'")
 
-        def jsonPayload = groovy.json.JsonOutput.toJson(payload).replaceAll("'", "\\\\'")
+        // 🔥 **Clear out the closures so nothing non‑serializable remains** 🔥
+        stages.clear()
 
-        echo "Sending build data: ${jsonPayload}"
-
-        sh """#!/bin/bash
-        curl -X POST http://34.42.18.106:5001/jenkinsdata \\
-             -H 'Content-Type: application/json' \\
-             -d '${jsonPayload}'
+        // now curl only primitives
+        sh """
+          curl -s -X POST http://34.42.18.106:5001/jenkinsdata \\
+               -H 'Content-Type: application/json' \\
+               -d '${json}' || true
         """
     }
 }
