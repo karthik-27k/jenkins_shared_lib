@@ -7,7 +7,7 @@ def call(int totalStages = 0) {
     def buildResult = currentBuild.currentResult ?: 'SUCCESS' // Defaults to SUCCESS if not set
 
     sh """
-    curl -X POST http://34.42.18.106:5001/jenkinsdata \
+    curl -X POST http://35.192.135.133:5001/jenkinsdata \
          -H 'Content-Type: application/json' \
          -d '{
                "user": "${user}",
